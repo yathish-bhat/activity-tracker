@@ -3,7 +3,18 @@ const cors = require("cors");
 const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://activity-tracker-26zv6hdz-yathish-bhats-projects.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true
+  })
+);
+
+app.options("*", cors());
 app.use(express.json());
 
 const db = new sqlite3.Database("./database.db");
