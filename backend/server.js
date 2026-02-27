@@ -21,8 +21,13 @@ db.serialize(() => {
   )`);
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend Running");
+});
+
 app.post("/activity", (req, res) => {
   const { type, title, emoji, scheduled_time, date } = req.body;
+
   db.run(
     `INSERT INTO activities (type,title,emoji,scheduled_time,date)
      VALUES (?,?,?,?,?)`,
@@ -36,6 +41,7 @@ app.post("/activity", (req, res) => {
 
 app.get("/activities/today", (req, res) => {
   const today = new Date().toISOString().split("T")[0];
+
   db.all(
     "SELECT * FROM activities WHERE date=? ORDER BY id DESC",
     [today],
@@ -84,4 +90,6 @@ app.get("/report/overview", (req, res) => {
   });
 });
 
-app.listen(5000, () => console.log("Backend running on 5000"));
+app.listen(process.env.PORT || 5000, () =>
+  console.log("Backend running")
+);
