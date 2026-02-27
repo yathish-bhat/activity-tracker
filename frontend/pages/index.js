@@ -8,7 +8,7 @@ export default function Home() {
   const [type, setType] = useState("work");
 
   const fetchActivities = async () => {
-    const res = await axios.get("http://localhost:5000/activities");
+    const res = await axios.get("https://activity-tracker-ht6l.onrender.com");
     setActivities(res.data);
   };
 
@@ -17,7 +17,7 @@ export default function Home() {
   }, []);
 
   const addActivity = async () => {
-    await axios.post("http://localhost:5000/activity", { type, title });
+    await axios.post("https://activity-tracker-ht6l.onrender.com", { type, title });
     setTitle("");
     fetchActivities();
   };
