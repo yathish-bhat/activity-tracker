@@ -1,0 +1,118 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+body {
+  margin:0;
+  background:#070812;
+  font-family:'DM Sans',sans-serif;
+  color:white;
+}
+
+.app {
+  display:grid;
+  grid-template-columns:80px 1fr 340px;
+  min-height:100vh;
+}
+
+.sidebar {
+  background:#0f111d;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:30px;
+  gap:30px;
+}
+
+.main {
+  padding:40px;
+}
+
+.panel {
+  background:#0f111d;
+  padding:40px;
+  border-left:1px solid rgba(255,255,255,0.05);
+}
+
+.greeting h1 {
+  font-family:'Syne';
+  font-size:40px;
+}
+
+.streak {
+  background:#162016;
+  color:#9eff57;
+  padding:8px 14px;
+  border-radius:20px;
+  display:inline-block;
+  margin-left:20px;
+}
+
+.stats {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:20px;
+  margin-top:30px;
+}
+
+.stat-card {
+  background:#121426;
+  padding:20px;
+  border-radius:20px;
+}
+
+.weekly {
+  background:#121426;
+  margin-top:30px;
+  padding:20px;
+  border-radius:20px;
+}
+
+.bars {
+  display:flex;
+  gap:10px;
+  margin-top:20px;
+}
+
+.bar {
+  width:40px;
+  background:#9eff57;
+  border-radius:10px;
+}
+
+.scheduler {
+  background:#121426;
+  margin-top:30px;
+  padding:20px;
+  border-radius:20px;
+}
+
+input, select {
+  background:#0f111d;
+  border:1px solid rgba(255,255,255,0.1);
+  color:white;
+  padding:8px;
+  border-radius:10px;
+  margin-right:10px;
+}
+
+button {
+  background:#9eff57;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.activities {
+  margin-top:20px;
+}
+
+.activity-card {
+  background:#121426;
+  padding:15px;
+  border-radius:15px;
+  margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
