@@ -8,7 +8,7 @@ export default function Home() {
   const [type, setType] = useState("work");
 
   const fetchActivities = async () => {
-    const res = await axios.get("https://activity-tracker-ht6l.onrender.com");
+    const res = await axios.get("https://activity-tracker-ht6l.onrender.com/activities");
     setActivities(res.data);
   };
 
