@@ -1,5 +1,6 @@
 
 import { useEffect } from 'react';
+import "../styles/pulse.css";
 
 export default function MyApp({ Component, pageProps }) {
   useEffect(() => {
