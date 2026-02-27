@@ -1,6 +1,5 @@
 {
-  "name": "activity-tracker-frontend",
-  "version": "1.0.0",
+  "name": "premium-activity-frontend",
   "private": true,
   "scripts": {
     "dev": "next dev",
