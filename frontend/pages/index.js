@@ -17,7 +17,7 @@ export default function Home() {
   }, []);
 
   const addActivity = async () => {
-    await axios.post("https://activity-tracker-ht6l.onrender.com", { type, title });
+    await axios.post("https://activity-tracker-ht6l.onrender.com/activities", { type, title });
     setTitle("");
     fetchActivities();
   };
