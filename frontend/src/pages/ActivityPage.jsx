@@ -1,111 +1,264 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import api from '../api';
-import { getGreeting, getFormattedToday } from '../utils';
-import StatCard from '../components/StatCard';
-import WeeklyChart from '../components/WeeklyChart';
-import ActivityBanner from '../components/ActivityBanner';
+import { ACTIVITY_TYPES, getTypeInfo, formatDate, getTodayStr } from '../utils';
 
-export default function HomePage() {
-  const { refreshKey } = useOutletContext();
-  const navigate = useNavigate();
-  const [activities, setActivities] = useState([]);
-  const [todayData, setTodayData] = useState([]);
-  const [loading, setLoading] = useState(true);
-
+function Toast({ message, onClose }) {
   useEffect(() => {
-    Promise.all([
-      api.get('/api/activities'),
-      api.get('/api/activities/today'),
-    ]).then(([allRes, todayRes]) => {
-      setActivities(allRes.data);
-      setTodayData(todayRes.data);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [refreshKey]);
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-medium"
+      style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderLeft: '3px solid var(--accent)', animation: 'slideIn 0.3s ease',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      }}>
+      <span style={{ color: 'var(--accent)' }}>✓</span> {message}
+    </div>
+  );
+}
 
-  // Compute stats from today's data
-  const walkMin = todayData.filter(a => a.type === 'walk').reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
-  const steps = Math.round(walkMin * 120);
-  const allActiveMin = todayData.filter(a => ['workout', 'walk'].includes(a.type)).reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
-  const calories = Math.round(allActiveMin * 8);
-  const distance = +(walkMin * 0.08).toFixed(1);
-  const sleepHrs = +(todayData.filter(a => a.type === 'sleep').reduce((s, a) => s + (a.unit === 'hours' ? a.duration : a.duration / 60), 0)).toFixed(1);
+function AddModal({ type, onClose, onSubmit }) {
+  const info = ACTIVITY_TYPES[type];
+  const [duration, setDuration] = useState('');
+  const [unit, setUnit] = useState('minutes');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const recent = activities.slice(0, 4);
+  const handleSubmit = async () => {
+    if (!duration) return;
+    setSubmitting(true);
+    await onSubmit({ type, duration: Number(duration), unit, notes, date: getTodayStr() });
+    setSubmitting(false);
+  };
 
-  // Calculate streak (consecutive days with activities)
-  const uniqueDates = [...new Set(activities.map(a => a.date))].sort().reverse();
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const ds = d.toISOString().split('T')[0];
-    if (uniqueDates.includes(ds)) streak++;
-    else if (i > 0) break; // allow today to be missing
-    else break;
-  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <div className="w-full max-w-md rounded-[20px] p-7"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)', animation: 'fadeUp 0.3s ease both' }}
+        onClick={e => e.stopPropagation()}>
 
-  const stats = [
-    { label: 'Steps', value: steps > 0 ? steps.toLocaleString() : null, unit: null, color: '#c8f55a', pct: (steps / 10000) * 100, change: steps > 0 ? 12 : null },
-    { label: 'Calories', value: calories > 0 ? calories.toLocaleString() : null, unit: null, color: '#ff6b6b', pct: (calories / 2200) * 100, change: calories > 0 ? 6 : null },
-    { label: 'Distance', value: distance > 0 ? distance : null, unit: distance > 0 ? 'km' : null, color: '#5a9cf5', pct: (distance / 8) * 100, change: distance > 0 ? -3 : null },
-    { label: 'Sleep', value: sleepHrs > 0 ? sleepHrs : null, unit: sleepHrs > 0 ? 'hr' : null, color: '#b5a9f5', pct: (sleepHrs / 8) * 100, change: sleepHrs > 0 ? 8 : null },
-  ];
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[28px]"
+            style={{ background: info.color + '20' }}>
+            {info.emoji}
+          </div>
+          <div>
+            <div className="text-lg font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>Add {info.label}</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>{info.desc}</div>
+          </div>
+          <button className="ml-auto text-lg cursor-pointer" style={{ color: 'var(--muted)' }} onClick={onClose}>✕</button>
+        </div>
+
+        {/* Duration */}
+        <div className="mb-5">
+          <label className="text-xs uppercase tracking-wider block mb-2" style={{ color: 'var(--muted)' }}>Duration</label>
+          <div className="flex gap-3">
+            <input type="number" placeholder="0" value={duration} onChange={e => setDuration(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-xl text-lg font-bold"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', fontFamily: 'Syne, sans-serif' }}
+              autoFocus />
+            <div className="flex rounded-full overflow-hidden" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+              {['minutes', 'hours'].map(u => (
+                <button key={u} onClick={() => setUnit(u)}
+                  className="px-4 py-2 text-xs transition-all duration-200"
+                  style={{
+                    background: unit === u ? 'rgba(200,245,90,0.12)' : 'transparent',
+                    color: unit === u ? 'var(--accent)' : 'var(--muted)',
+                  }}>
+                  {u}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="mb-6">
+          <label className="text-xs uppercase tracking-wider block mb-2" style={{ color: 'var(--muted)' }}>Notes (optional)</label>
+          <textarea rows={3} placeholder="Add details..." value={notes} onChange={e => setNotes(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl text-sm resize-none"
+            style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }} />
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 py-3 rounded-[14px] text-sm transition-all duration-200"
+            style={{ background: 'var(--surface2)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={!duration || submitting}
+            className="flex-1 py-3 rounded-[14px] font-bold text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: info.color, color: '#0a0a0f', fontFamily: 'Syne, sans-serif' }}
+            onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.filter = ''; }}>
+            {submitting ? 'Adding...' : 'Add Activity'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ActivityPage() {
+  const { onRefresh } = useOutletContext();
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [addingType, setAddingType] = useState(null);
+
+  const fetchActivities = () => {
+    api.get('/api/activities').then(r => { setActivities(r.data); setLoading(false); }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchActivities(); }, []);
+
+  const handleAdd = async (data) => {
+    try {
+      await api.post('/api/activities', data);
+      setAddingType(null);
+      setToast('Activity logged!');
+      fetchActivities();
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this activity?')) return;
+    try {
+      await api.delete('/api/activities/' + id);
+      fetchActivities();
+      onRefresh();
+    } catch (err) { console.error(err); }
+  };
+
+  // Group by date
+  const grouped = activities.reduce((acc, a) => {
+    (acc[a.date] = acc[a.date] || []).push(a);
+    return acc;
+  }, {});
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
   return (
     <>
-      {/* Header */}
-      <header className="flex items-end justify-between mb-9" style={{ animation: 'fadeUp 0.6s ease both' }}>
-        <div className="font-syne">
-          <div className="text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--muted)' }}>
-            {getFormattedToday()}
-          </div>
-          <h1 className="text-[28px] font-extrabold leading-none">
-            {getGreeting()}, <span style={{ color: 'var(--accent)' }}>Marcus</span> 👋
-          </h1>
-        </div>
-        {streak > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium"
-            style={{
-              background: 'rgba(200,245,90,0.08)',
-              border: '1px solid rgba(200,245,90,0.2)',
-              color: 'var(--accent)',
-            }}>
-            <span className="text-base">🔥</span>
-            <span>{streak} day streak</span>
-          </div>
-        )}
-      </header>
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {addingType && <AddModal type={addingType} onClose={() => setAddingType(null)} onSubmit={handleAdd} />}
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-4 mb-7" style={{ animation: 'fadeUp 0.6s 0.1s ease both' }}>
-        {stats.map(s => <StatCard key={s.label} {...s} />)}
+      {/* Page Title */}
+      <div className="mb-8" style={{ animation: 'fadeUp 0.6s ease both' }}>
+        <div className="text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--muted)', fontFamily: 'DM Sans, sans-serif' }}>
+          Track your day
+        </div>
+        <h1 className="text-[28px] font-extrabold leading-none" style={{ fontFamily: 'Syne, sans-serif' }}>
+          Activities
+        </h1>
       </div>
 
-      {/* Weekly Chart */}
-      <WeeklyChart refreshKey={refreshKey} />
+      {/* Activity Type Banners */}
+      <div className="flex flex-col gap-4 mb-10" style={{ animation: 'fadeUp 0.6s 0.1s ease both' }}>
+        {Object.entries(ACTIVITY_TYPES).map(([key, info]) => {
+          const todayLogs = activities.filter(a => a.type === key && a.date === getTodayStr());
+          const totalMin = todayLogs.reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
 
-      {/* Recent Activities */}
-      <div className="font-syne text-[15px] font-bold mb-4 flex items-center justify-between"
-        style={{ animation: 'fadeUp 0.6s 0.3s ease both' }}>
-        Recent Activities
-        <span className="font-dm text-xs font-normal cursor-pointer hover:text-accent transition-colors"
-          style={{ color: 'var(--muted)', fontFamily: 'DM Sans' }}
-          onClick={() => navigate('/activities')}>
-          See all →
-        </span>
+          return (
+            <div key={key}
+              className="flex items-center gap-5 rounded-[20px] p-5 transition-all duration-200 hover:-translate-y-0.5"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[28px] shrink-0"
+                style={{ background: info.color + '15' }}>
+                {info.emoji}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base mb-0.5" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
+                <div className="text-xs" style={{ color: 'var(--muted)' }}>{info.desc}</div>
+                {todayLogs.length > 0 && (
+                  <div className="text-[11px] mt-1.5" style={{ color: info.color }}>
+                    {todayLogs.length} logged today · {totalMin} min total
+                  </div>
+                )}
+              </div>
+              <button
+                className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shrink-0"
+                style={{ background: info.color + '18', color: info.color, border: '1px solid ' + info.color + '40' }}
+                onClick={() => setAddingType(key)}
+                onMouseEnter={e => { e.currentTarget.style.background = info.color; e.currentTarget.style.color = '#0a0a0f'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = info.color + '18'; e.currentTarget.style.color = info.color; }}
+              >
+                + Add
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Activity Log */}
+      <div className="text-[15px] font-bold mb-4" style={{ fontFamily: 'Syne, sans-serif', animation: 'fadeUp 0.6s 0.2s ease both' }}>
+        Activity Log
       </div>
 
       {loading ? (
         <div className="text-center py-8" style={{ color: 'var(--muted)' }}>Loading...</div>
-      ) : recent.length === 0 ? (
-        <div className="text-center py-12 rounded-[20px]" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', animation: 'fadeUp 0.6s 0.3s ease both' }}>
-          No activities yet — <span className="cursor-pointer underline" style={{ color: 'var(--accent)' }} onClick={() => navigate('/activities')}>log your first one →</span>
+      ) : activities.length === 0 ? (
+        <div className="text-center py-12 rounded-[20px]"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}>
+          No activities yet — use the Add buttons above to start tracking
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4" style={{ animation: 'fadeUp 0.6s 0.3s ease both' }}>
-          {recent.map(a => <ActivityBanner key={a.id} activity={a} />)}
+        <div style={{ animation: 'fadeUp 0.6s 0.2s ease both' }}>
+          {sortedDates.map(date => (
+            <div key={date} className="mb-6">
+              <div className="text-[11px] uppercase tracking-wider mb-3 px-1" style={{ color: 'var(--muted)' }}>
+                {formatDate(date)}
+              </div>
+              <div className="flex flex-col gap-2">
+                {grouped[date].map(a => {
+                  const info = getTypeInfo(a.type);
+                  return (
+                    <div key={a.id}
+                      className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-all duration-200 hover:-translate-y-0.5"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    >
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                        style={{ background: info.color + '15' }}>
+                        {info.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
+                        <div className="text-[11px] truncate" style={{ color: 'var(--muted)' }}>
+                          {a.notes || 'No notes'}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-bold text-sm" style={{ fontFamily: 'Syne, sans-serif', color: info.color }}>
+                          {a.duration} {a.unit === 'hours' ? 'hr' : 'min'}
+                        </div>
+                      </div>
+                      <button onClick={() => handleDelete(a.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm cursor-pointer shrink-0 ml-2"
+                        style={{ color: 'var(--muted)' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent2)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+                        🗑
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </>

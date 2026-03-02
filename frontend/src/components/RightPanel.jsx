@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import GoalRings from './GoalRings';
+import { getTypeInfo, ACTIVITY_TYPES } from '../utils';
 import MiniCalendar from './MiniCalendar';
 
 export default function RightPanel({ refreshKey }) {
@@ -12,60 +12,83 @@ export default function RightPanel({ refreshKey }) {
     api.get('/api/activities').then(r => setAllActivities(r.data)).catch(() => {});
   }, [refreshKey]);
 
-  // Compute goals from today's activities
-  const walkMin = todayData.filter(a => a.type === 'walk').reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
-  const steps = Math.round(walkMin * 120); // ~120 steps/min estimate
-  const workoutMin = todayData.filter(a => ['workout', 'walk'].includes(a.type)).reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
-  const calories = Math.round(workoutMin * 8); // ~8 cal/min estimate
-  const distance = +(walkMin * 0.08).toFixed(1); // ~0.08 km/min
-
-  // Active dates for calendar
   const activeDates = [...new Set(allActivities.map(a => a.date))];
+
+  // Group today's activities by type
+  const todayByType = todayData.reduce((acc, a) => {
+    if (!acc[a.type]) acc[a.type] = [];
+    acc[a.type].push(a);
+    return acc;
+  }, {});
 
   return (
     <aside className="overflow-y-auto p-8 px-6"
       style={{ background: 'var(--surface)', borderLeft: '1px solid var(--border)', scrollbarWidth: 'none' }}>
 
-      {/* Daily Goals */}
+      {/* Today's Activities */}
       <div className="mb-8" style={{ animation: 'fadeUp 0.6s ease both' }}>
-        <div className="font-syne text-[15px] font-bold mb-4">Daily Goals</div>
-        <GoalRings steps={steps} calories={calories} distance={distance} />
+        <div className="text-[15px] font-bold mb-4" style={{ fontFamily: 'Syne, sans-serif' }}>Today's Activities</div>
+
+        {todayData.length === 0 ? (
+          <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--surface2)' }}>
+            <div className="text-2xl mb-2">📋</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              No activities logged today.<br />Head to Activities to start tracking.
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {Object.entries(todayByType).map(([type, items]) => {
+              const info = getTypeInfo(type);
+              const totalMin = items.reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
+              return (
+                <div key={type} className="rounded-2xl p-4" style={{ background: 'var(--surface2)' }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                      style={{ background: info.color + '15' }}>
+                      {info.emoji}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
+                    </div>
+                    <div className="text-sm font-bold" style={{ fontFamily: 'Syne, sans-serif', color: info.color }}>
+                      {totalMin} min
+                    </div>
+                  </div>
+                  {items.map(a => (
+                    <div key={a.id} className="flex items-center justify-between py-1.5 ml-11">
+                      <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                        {a.notes || 'No notes'}
+                      </div>
+                      <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                        {a.duration} {a.unit === 'hours' ? 'hr' : 'min'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Heart Rate */}
-      <div className="mb-8" style={{ animation: 'fadeUp 0.6s 0.15s ease both' }}>
-        <div className="font-syne text-[15px] font-bold mb-4">Heart Rate</div>
-        <div className="flex items-center gap-3 rounded-2xl p-4 mb-4" style={{ background: 'var(--surface2)' }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-            style={{ background: 'rgba(255,107,107,0.1)', animation: 'heartbeat 1.2s ease-in-out infinite' }}>
-            ❤️
-          </div>
-          <div className="flex-1">
-            <div className="font-syne text-2xl font-extrabold leading-none" style={{ color: 'var(--accent2)' }}>
-              72 <span className="text-xs font-normal" style={{ color: 'var(--muted)' }}>bpm</span>
+      {/* Available Activities */}
+      <div className="mb-8" style={{ animation: 'fadeUp 0.6s 0.1s ease both' }}>
+        <div className="text-[15px] font-bold mb-4" style={{ fontFamily: 'Syne, sans-serif' }}>Available Activities</div>
+        <div className="flex flex-col gap-2">
+          {Object.entries(ACTIVITY_TYPES).map(([key, info]) => (
+            <div key={key} className="flex items-center gap-3 py-2">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: info.color }} />
+              <div className="flex-1 text-xs" style={{ color: 'var(--muted)' }}>{info.label}</div>
+              <div className="text-[10px]" style={{ color: info.color }}>{info.emoji}</div>
             </div>
-            <div className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>Resting · Normal</div>
-          </div>
-        </div>
-        <div className="h-10 overflow-hidden">
-          <svg viewBox="0 0 240 40" preserveAspectRatio="none" width="100%" height="100%">
-            <defs>
-              <linearGradient id="hrGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ff6b6b" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#ff6b6b" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path d="M0,25 L20,25 L30,10 L40,30 L50,25 L70,25 L80,8 L90,32 L100,25 L120,25 L130,12 L140,28 L150,25 L170,25 L180,6 L190,34 L200,25 L220,25 L230,14 L240,25"
-              fill="none" stroke="#ff6b6b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M0,25 L20,25 L30,10 L40,30 L50,25 L70,25 L80,8 L90,32 L100,25 L120,25 L130,12 L140,28 L150,25 L170,25 L180,6 L190,34 L200,25 L220,25 L230,14 L240,25 L240,40 L0,40 Z"
-              fill="url(#hrGrad)" />
-          </svg>
+          ))}
         </div>
       </div>
 
       {/* Mini Calendar */}
-      <div style={{ animation: 'fadeUp 0.6s 0.25s ease both' }}>
-        <div className="font-syne text-[15px] font-bold mb-4">
+      <div style={{ animation: 'fadeUp 0.6s 0.2s ease both' }}>
+        <div className="text-[15px] font-bold mb-4" style={{ fontFamily: 'Syne, sans-serif' }}>
           {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </div>
         <MiniCalendar activeDates={activeDates} />

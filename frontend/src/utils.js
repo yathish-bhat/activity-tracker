@@ -1,17 +1,14 @@
 export const ACTIVITY_TYPES = {
-  work:       { emoji: '💼', color: '#5a9cf5', label: 'Work' },
-  workout:    { emoji: '🏋️', color: '#ff6b6b', label: 'Workout' },
-  water:      { emoji: '💧', color: '#5a9cf5', label: 'Water' },
-  sleep:      { emoji: '😴', color: '#b5a9f5', label: 'Sleep' },
-  meditation: { emoji: '🧘', color: '#b5a9f5', label: 'Meditation' },
-  walk:       { emoji: '🚶', color: '#c8f55a', label: 'Walk' },
-  care:       { emoji: '🌿', color: '#10b981', label: 'Care' },
-  reading:    { emoji: '📚', color: '#f59e0b', label: 'Reading' },
-  custom:     { emoji: '✨', color: '#6b6b80', label: 'Custom' },
+  work:       { emoji: '💼', color: '#5a9cf5', label: 'Work', desc: 'Track your work sessions' },
+  workout:    { emoji: '🏋️', color: '#ff6b6b', label: 'Workout', desc: 'Gym, training, exercise' },
+  sleep:      { emoji: '😴', color: '#b5a9f5', label: 'Sleep', desc: 'Track your sleep hours' },
+  meditation: { emoji: '🧘', color: '#b5a9f5', label: 'Meditation', desc: 'Mindfulness & breathing' },
+  walk:       { emoji: '🚶', color: '#c8f55a', label: 'Walk', desc: 'Walking & steps' },
+  reading:    { emoji: '📚', color: '#f59e0b', label: 'Reading', desc: 'Books & articles' },
 };
 
 export function getTypeInfo(type) {
-  return ACTIVITY_TYPES[type] || ACTIVITY_TYPES.custom;
+  return ACTIVITY_TYPES[type] || { emoji: '✨', color: '#6b6b80', label: type, desc: '' };
 }
 
 export function formatDate(dateStr) {
@@ -26,15 +23,10 @@ export function getGreeting() {
   return 'Good evening';
 }
 
-export function getTodayStr() {
-  return new Date().toISOString().split('T')[0];
-}
-
-export function getDayOfWeek() {
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  return days[new Date().getDay()];
-}
-
 export function getFormattedToday() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+export function getTodayStr() {
+  return new Date().toISOString().split('T')[0];
 }
