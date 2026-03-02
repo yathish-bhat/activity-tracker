@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 
 const navItems = [
   { path: '/', title: 'Dashboard', icon: (
@@ -16,6 +17,9 @@ const navItems = [
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const initials = user?.name ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
 
   return (
     <nav className="flex flex-col items-center py-6 gap-2 relative z-10"
@@ -51,6 +55,29 @@ export default function Sidebar() {
           </div>
         );
       })}
+
+      {/* Spacer + Logout + Avatar */}
+      <div className="mt-auto flex flex-col items-center gap-3">
+        {/* Logout */}
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200"
+          style={{ color: 'var(--muted)' }}
+          title="Sign out"
+          onClick={logout}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.1)'; e.currentTarget.style.color = 'var(--accent2)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </div>
+
+        {/* User avatar */}
+        <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-[11px] cursor-default"
+          style={{ background: 'linear-gradient(135deg, #c8f55a, #5a9cf5)', color: '#0a0a0f', fontFamily: 'Syne, sans-serif' }}
+          title={user?.name || ''}>
+          {initials}
+        </div>
+      </div>
     </nav>
   );
 }

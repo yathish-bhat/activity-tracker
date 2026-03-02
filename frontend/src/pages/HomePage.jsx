@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 import api from '../api';
 import { getGreeting, getFormattedToday, ACTIVITY_TYPES, getTypeInfo, formatDate } from '../utils';
 import WeeklyChart from '../components/WeeklyChart';
 
 export default function HomePage() {
   const { refreshKey } = useOutletContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,8 +17,9 @@ export default function HomePage() {
   }, [refreshKey]);
 
   const recent = activities.slice(0, 6);
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  // Streak calculation
+  // Streak
   const uniqueDates = [...new Set(activities.map(a => a.date))].sort().reverse();
   let streak = 0;
   const today = new Date();
@@ -29,16 +32,17 @@ export default function HomePage() {
     else break;
   }
 
+  const firstName = user?.name?.split(' ')[0] || '';
+
   return (
     <>
-      {/* Header */}
       <header className="flex items-end justify-between mb-9" style={{ animation: 'fadeUp 0.6s ease both' }}>
         <div style={{ fontFamily: 'Syne, sans-serif' }}>
           <div className="text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--muted)' }}>
             {getFormattedToday()}
           </div>
           <h1 className="text-[28px] font-extrabold leading-none">
-            {getGreeting()} 👋
+            {getGreeting()}{firstName ? ', ' : ''}{firstName ? <span style={{ color: 'var(--accent)' }}>{firstName}</span> : ''} 👋
           </h1>
         </div>
         {streak > 0 && (
@@ -53,7 +57,7 @@ export default function HomePage() {
       {/* Activity Type Cards */}
       <div className="grid grid-cols-3 gap-4 mb-7" style={{ animation: 'fadeUp 0.6s 0.1s ease both' }}>
         {Object.entries(ACTIVITY_TYPES).map(([key, info]) => {
-          const todayCount = activities.filter(a => a.type === key && a.date === new Date().toISOString().split('T')[0]).length;
+          const todayCount = activities.filter(a => a.type === key && a.date === todayStr).length;
           return (
             <div key={key}
               className="relative overflow-hidden rounded-[20px] p-5 cursor-default transition-all duration-200 hover:-translate-y-0.5"
@@ -75,16 +79,13 @@ export default function HomePage() {
               <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
                 {todayCount > 0 ? (
                   <span style={{ color: info.color }}>{todayCount} logged today</span>
-                ) : (
-                  'No entries today'
-                )}
+                ) : 'No entries today'}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Weekly Chart */}
       <WeeklyChart refreshKey={refreshKey} />
 
       {/* Recent Activities */}
@@ -120,9 +121,7 @@ export default function HomePage() {
                 onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 <div className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[22px] shrink-0"
-                  style={{ background: info.color + '15' }}>
-                  {info.emoji}
-                </div>
+                  style={{ background: info.color + '15' }}>{info.emoji}</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
                   <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
