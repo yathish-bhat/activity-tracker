@@ -7,7 +7,7 @@ import { ACTIVITY_TYPES, getTypeInfo, formatDate, getTodayStr } from '../utils';
 function Toast({ message, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [onClose]);
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-medium"
+    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-medium"
       style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)',
         animation: 'slideIn 0.3s ease', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
       <span style={{ color: 'var(--accent)' }}>✓</span> {message}
@@ -28,16 +28,20 @@ function AddModal({ type, onClose, onSubmit }) {
     setSubmitting(false);
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-[20px] p-7"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', animation: 'fadeUp 0.3s ease both' }}
+      <div className="w-full sm:max-w-md rounded-t-[24px] sm:rounded-[20px] p-6 sm:p-7"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)',
+          animation: window.innerWidth < 640 ? 'slideUp 0.3s ease both' : 'fadeUp 0.3s ease both',
+          paddingBottom: 'max(24px, calc(var(--safe-bottom) + 16px))' }}
         onClick={e => e.stopPropagation()}>
+        {/* Drag handle on mobile */}
+        <div className="sm:hidden w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'var(--border)' }} />
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[28px]"
+          <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-2xl flex items-center justify-center text-[24px] sm:text-[28px]"
             style={{ background: info.color + '20' }}>{info.emoji}</div>
           <div>
-            <div className="text-lg font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>Add {info.label}</div>
+            <div className="text-base sm:text-lg font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>Add {info.label}</div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>{info.desc}</div>
           </div>
           <button className="ml-auto text-lg cursor-pointer" style={{ color: 'var(--muted)' }} onClick={onClose}>✕</button>
@@ -45,12 +49,12 @@ function AddModal({ type, onClose, onSubmit }) {
         <div className="mb-5">
           <label className="text-xs uppercase tracking-wider block mb-2" style={{ color: 'var(--muted)' }}>Duration</label>
           <div className="flex gap-3">
-            <input type="number" placeholder="0" value={duration} onChange={e => setDuration(e.target.value)}
+            <input type="number" inputMode="numeric" placeholder="0" value={duration} onChange={e => setDuration(e.target.value)}
               className="flex-1 px-4 py-3 rounded-xl text-lg font-bold"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', fontFamily: 'Syne, sans-serif' }} autoFocus />
             <div className="flex rounded-full overflow-hidden" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
               {['minutes', 'hours'].map(u => (
-                <button key={u} onClick={() => setUnit(u)} className="px-4 py-2 text-xs transition-all duration-200"
+                <button key={u} onClick={() => setUnit(u)} className="px-3 sm:px-4 py-2 text-xs transition-all duration-200"
                   style={{ background: unit === u ? 'rgba(200,245,90,0.12)' : 'transparent', color: unit === u ? 'var(--accent)' : 'var(--muted)' }}>
                   {u}
                 </button>
@@ -69,9 +73,7 @@ function AddModal({ type, onClose, onSubmit }) {
             style={{ background: 'var(--surface2)', color: 'var(--muted)', border: '1px solid var(--border)' }}>Cancel</button>
           <button onClick={handleSubmit} disabled={!duration || submitting}
             className="flex-1 py-3 rounded-[14px] font-bold text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: info.color, color: '#0a0a0f', fontFamily: 'Syne, sans-serif' }}
-            onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.filter = ''; }}>
+            style={{ background: info.color, color: '#0a0a0f', fontFamily: 'Syne, sans-serif' }}>
             {submitting ? 'Adding...' : 'Add Activity'}
           </button>
         </div>
@@ -80,41 +82,31 @@ function AddModal({ type, onClose, onSubmit }) {
   );
 }
 
-// ── Report Generator ──
 function generateReportText(data, type) {
   const lines = [];
-  const divider = '═'.repeat(48);
-  const thinDiv = '─'.repeat(48);
-
+  const divider = '='.repeat(48);
+  const thinDiv = '-'.repeat(48);
   lines.push(divider);
   lines.push(`  PULSE — ${type === 'daily' ? 'DAILY' : 'WEEKLY'} ACTIVITY REPORT`);
   lines.push(`  User: ${data.userName}`);
-  if (type === 'daily') {
-    lines.push(`  Date: ${formatDate(data.date)}`);
-  } else {
-    lines.push(`  Week: ${formatDate(data.weekStart)} — ${formatDate(data.weekEnd)}`);
-  }
+  if (type === 'daily') lines.push(`  Date: ${formatDate(data.date)}`);
+  else lines.push(`  Week: ${formatDate(data.weekStart)} — ${formatDate(data.weekEnd)}`);
   lines.push(divider);
   lines.push('');
-
   lines.push(`  Total Activities:  ${data.totalActivities}`);
   lines.push(`  Total Time:        ${Math.floor(data.totalMinutes / 60)}h ${data.totalMinutes % 60}m`);
-  if (type === 'weekly') {
-    lines.push(`  Days Active:       ${data.daysActive} / 7`);
-  }
+  if (type === 'weekly') lines.push(`  Days Active:       ${data.daysActive} / 7`);
   lines.push('');
   lines.push(thinDiv);
   lines.push('  BREAKDOWN BY TYPE');
   lines.push(thinDiv);
-
   const summary = type === 'daily' ? data.summary : data.byType;
-  Object.entries(summary).forEach(([actType, info]) => {
-    const typeInfo = getTypeInfo(actType);
+  Object.entries(summary).forEach(([t, info]) => {
+    const ti = getTypeInfo(t);
     const hrs = Math.floor(info.totalMin / 60);
     const mins = info.totalMin % 60;
-    lines.push(`  ${typeInfo.emoji}  ${typeInfo.label.padEnd(14)} ${String(info.count).padStart(3)} entries    ${hrs > 0 ? hrs + 'h ' : ''}${mins}m`);
+    lines.push(`  ${ti.emoji}  ${ti.label.padEnd(14)} ${String(info.count).padStart(3)} entries    ${hrs > 0 ? hrs + 'h ' : ''}${mins}m`);
   });
-
   if (type === 'weekly' && data.byDate) {
     lines.push('');
     lines.push(thinDiv);
@@ -125,7 +117,6 @@ function generateReportText(data, type) {
       lines.push(`  ${formatDate(date).padEnd(20)} ${items.length} activities    ${Math.floor(dayMin / 60)}h ${dayMin % 60}m`);
     });
   }
-
   if (type === 'daily' && data.activities?.length > 0) {
     lines.push('');
     lines.push(thinDiv);
@@ -136,13 +127,11 @@ function generateReportText(data, type) {
       lines.push(`  ${info.emoji}  ${info.label} — ${a.duration} ${a.unit === 'hours' ? 'hr' : 'min'}${a.notes ? '  "' + a.notes + '"' : ''}`);
     });
   }
-
   lines.push('');
   lines.push(divider);
   lines.push('  Generated by Pulse Activity Tracker');
   lines.push(`  ${new Date().toLocaleString()}`);
   lines.push(divider);
-
   return lines.join('\n');
 }
 
@@ -150,15 +139,12 @@ function downloadReport(text, filename) {
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
 export default function ActivityPage() {
   const { onRefresh } = useOutletContext();
-  const { user } = useAuth();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -194,7 +180,7 @@ export default function ActivityPage() {
     try {
       const res = await api.get('/api/activities/report/daily?date=' + getTodayStr());
       const text = generateReportText(res.data, 'daily');
-      downloadReport(text, `pulse-daily-report-${getTodayStr()}.txt`);
+      downloadReport(text, `pulse-daily-${getTodayStr()}.txt`);
       setToast('Daily report downloaded!');
     } catch (err) { console.error(err); }
     setDownloading(null);
@@ -205,7 +191,7 @@ export default function ActivityPage() {
     try {
       const res = await api.get('/api/activities/report/weekly');
       const text = generateReportText(res.data, 'weekly');
-      downloadReport(text, `pulse-weekly-report-${res.data.weekStart}.txt`);
+      downloadReport(text, `pulse-weekly-${res.data.weekStart}.txt`);
       setToast('Weekly report downloaded!');
     } catch (err) { console.error(err); }
     setDownloading(null);
@@ -220,64 +206,58 @@ export default function ActivityPage() {
       {addingType && <AddModal type={addingType} onClose={() => setAddingType(null)} onSubmit={handleAdd} />}
 
       {/* Header */}
-      <div className="flex items-end justify-between mb-8" style={{ animation: 'fadeUp 0.6s ease both' }}>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 sm:mb-8 gap-3" style={{ animation: 'fadeUp 0.6s ease both' }}>
         <div>
-          <div className="text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--muted)', fontFamily: 'DM Sans, sans-serif' }}>
-            Track your day
-          </div>
-          <h1 className="text-[28px] font-extrabold leading-none" style={{ fontFamily: 'Syne, sans-serif' }}>
-            Activities
-          </h1>
+          <div className="text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--muted)' }}>Track your day</div>
+          <h1 className="text-[22px] sm:text-[28px] font-extrabold leading-none" style={{ fontFamily: 'Syne, sans-serif' }}>Activities</h1>
         </div>
-
-        {/* Report Buttons */}
         <div className="flex gap-2">
           <button onClick={handleDailyReport} disabled={downloading === 'daily'}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-medium transition-all duration-200"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            {downloading === 'daily' ? 'Generating...' : 'Daily Report'}
+            {downloading === 'daily' ? '...' : 'Daily'}
           </button>
           <button onClick={handleWeeklyReport} disabled={downloading === 'weekly'}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-medium transition-all duration-200"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent3)'; e.currentTarget.style.color = 'var(--accent3)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            {downloading === 'weekly' ? 'Generating...' : 'Weekly Report'}
+            {downloading === 'weekly' ? '...' : 'Weekly'}
           </button>
         </div>
       </div>
 
-      {/* Activity Type Banners */}
-      <div className="flex flex-col gap-4 mb-10" style={{ animation: 'fadeUp 0.6s 0.1s ease both' }}>
+      {/* Activity Banners */}
+      <div className="flex flex-col gap-3 sm:gap-4 mb-8 sm:mb-10" style={{ animation: 'fadeUp 0.6s 0.1s ease both' }}>
         {Object.entries(ACTIVITY_TYPES).map(([key, info]) => {
           const todayLogs = activities.filter(a => a.type === key && a.date === getTodayStr());
           const totalMin = todayLogs.reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
           return (
             <div key={key}
-              className="flex items-center gap-5 rounded-[20px] p-5 transition-all duration-200 hover:-translate-y-0.5"
+              className="flex items-center gap-4 sm:gap-5 rounded-2xl sm:rounded-[20px] p-4 sm:p-5 transition-all duration-200 hover:-translate-y-0.5"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[28px] shrink-0"
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-[22px] sm:text-[28px] shrink-0"
                 style={{ background: info.color + '15' }}>{info.emoji}</div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-base mb-0.5" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
-                <div className="text-xs" style={{ color: 'var(--muted)' }}>{info.desc}</div>
+                <div className="font-bold text-sm sm:text-base mb-0.5" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
+                <div className="text-[11px] sm:text-xs hidden sm:block" style={{ color: 'var(--muted)' }}>{info.desc}</div>
                 {todayLogs.length > 0 && (
-                  <div className="text-[11px] mt-1.5" style={{ color: info.color }}>
-                    {todayLogs.length} logged today · {totalMin} min total
+                  <div className="text-[10px] sm:text-[11px] mt-1" style={{ color: info.color }}>
+                    {todayLogs.length} today · {totalMin}m
                   </div>
                 )}
               </div>
-              <button className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shrink-0"
+              <button className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 shrink-0"
                 style={{ background: info.color + '18', color: info.color, border: '1px solid ' + info.color + '40' }}
                 onClick={() => setAddingType(key)}
                 onMouseEnter={e => { e.currentTarget.style.background = info.color; e.currentTarget.style.color = '#0a0a0f'; }}
@@ -299,7 +279,7 @@ export default function ActivityPage() {
       ) : activities.length === 0 ? (
         <div className="text-center py-12 rounded-[20px]"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}>
-          No activities yet — use the Add buttons above to start tracking
+          No activities yet — use the Add buttons above
         </div>
       ) : (
         <div style={{ animation: 'fadeUp 0.6s 0.2s ease both' }}>
@@ -313,11 +293,11 @@ export default function ActivityPage() {
                   const info = getTypeInfo(a.type);
                   return (
                     <div key={a.id}
-                      className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-all duration-200 hover:-translate-y-0.5"
+                      className="group flex items-center gap-3 sm:gap-4 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 transition-all duration-200 hover:-translate-y-0.5"
                       style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0"
                         style={{ background: info.color + '15' }}>{info.emoji}</div>
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
@@ -329,10 +309,8 @@ export default function ActivityPage() {
                         </div>
                       </div>
                       <button onClick={() => handleDelete(a.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm cursor-pointer shrink-0 ml-2"
-                        style={{ color: 'var(--muted)' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent2)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>🗑</button>
+                        className="sm:opacity-0 sm:group-hover:opacity-100 opacity-60 transition-opacity duration-200 text-sm cursor-pointer shrink-0"
+                        style={{ color: 'var(--muted)' }}>🗑</button>
                     </div>
                   );
                 })}
