@@ -20,9 +20,19 @@ db.exec(`
     unit TEXT DEFAULT 'minutes',
     notes TEXT,
     date TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    actual_duration INTEGER,
+    actual_unit TEXT,
+    completed_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 `);
+
+// Migration: add columns if they don't exist (safe for existing DBs)
+try { db.exec('ALTER TABLE activities ADD COLUMN status TEXT DEFAULT "pending"'); } catch(e) {}
+try { db.exec('ALTER TABLE activities ADD COLUMN actual_duration INTEGER'); } catch(e) {}
+try { db.exec('ALTER TABLE activities ADD COLUMN actual_unit TEXT'); } catch(e) {}
+try { db.exec('ALTER TABLE activities ADD COLUMN completed_at DATETIME'); } catch(e) {}
 
 module.exports = db;

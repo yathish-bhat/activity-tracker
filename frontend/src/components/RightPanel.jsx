@@ -14,12 +14,15 @@ export default function RightPanel({ refreshKey }) {
 
   const activeDates = [...new Set(allActivities.map(a => a.date))];
 
-  // Group today's activities by type
   const todayByType = todayData.reduce((acc, a) => {
     if (!acc[a.type]) acc[a.type] = [];
     acc[a.type].push(a);
     return acc;
   }, {});
+
+  const todayCompleted = todayData.filter(a => a.status === 'completed').length;
+  const todayTotal = todayData.length;
+  const completionPct = todayTotal > 0 ? Math.round((todayCompleted / todayTotal) * 100) : 0;
 
   return (
     <aside className="overflow-y-auto p-8 px-6"
@@ -27,7 +30,18 @@ export default function RightPanel({ refreshKey }) {
 
       {/* Today's Activities */}
       <div className="mb-8" style={{ animation: 'fadeUp 0.6s ease both' }}>
-        <div className="text-[15px] font-bold mb-4" style={{ fontFamily: 'Syne, sans-serif' }}>Today's Activities</div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[15px] font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>Today</div>
+          {todayTotal > 0 && (
+            <div className="text-[11px] font-bold px-2.5 py-1 rounded-lg"
+              style={{
+                background: completionPct === 100 ? 'rgba(200,245,90,0.12)' : 'rgba(255,255,255,0.04)',
+                color: completionPct === 100 ? 'var(--accent)' : 'var(--muted)',
+              }}>
+              {todayCompleted}/{todayTotal} done
+            </div>
+          )}
+        </div>
 
         {todayData.length === 0 ? (
           <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--surface2)' }}>
@@ -38,9 +52,29 @@ export default function RightPanel({ refreshKey }) {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
+            {/* Completion bar */}
+            {todayTotal > 0 && (
+              <div className="rounded-xl p-3" style={{ background: 'var(--surface2)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Completion</span>
+                  <span className="text-xs font-bold" style={{ fontFamily: 'Syne, sans-serif', color: completionPct === 100 ? 'var(--accent)' : 'var(--text)' }}>
+                    {completionPct}%
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: completionPct + '%',
+                      background: completionPct === 100 ? 'var(--accent)' : 'linear-gradient(90deg, var(--accent3), var(--accent))',
+                    }} />
+                </div>
+              </div>
+            )}
+
             {Object.entries(todayByType).map(([type, items]) => {
               const info = getTypeInfo(type);
               const totalMin = items.reduce((s, a) => s + (a.unit === 'hours' ? a.duration * 60 : a.duration), 0);
+              const doneCount = items.filter(a => a.status === 'completed').length;
               return (
                 <div key={type} className="rounded-2xl p-4" style={{ background: 'var(--surface2)' }}>
                   <div className="flex items-center gap-3 mb-2">
@@ -51,17 +85,30 @@ export default function RightPanel({ refreshKey }) {
                     <div className="flex-1">
                       <div className="text-sm font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>{info.label}</div>
                     </div>
-                    <div className="text-sm font-bold" style={{ fontFamily: 'Syne, sans-serif', color: info.color }}>
-                      {totalMin} min
+                    <div className="text-right">
+                      <div className="text-sm font-bold" style={{ fontFamily: 'Syne, sans-serif', color: info.color }}>
+                        {totalMin}m
+                      </div>
+                      <div className="text-[9px]" style={{ color: 'var(--muted)' }}>
+                        {doneCount}/{items.length} done
+                      </div>
                     </div>
                   </div>
                   {items.map(a => (
                     <div key={a.id} className="flex items-center justify-between py-1.5 ml-11">
-                      <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
-                        {a.notes || 'No notes'}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px]" style={{ color: a.status === 'completed' ? 'var(--accent)' : 'var(--muted)' }}>
+                          {a.status === 'completed' ? '✓' : '○'}
+                        </span>
+                        <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                          {a.notes || 'No notes'}
+                        </span>
                       </div>
                       <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
                         {a.duration} {a.unit === 'hours' ? 'hr' : 'min'}
+                        {a.status === 'completed' && a.actual_duration && (
+                          <span style={{ color: 'var(--accent)' }}> → {a.actual_duration}{a.actual_unit === 'hours' ? 'h' : 'm'}</span>
+                        )}
                       </div>
                     </div>
                   ))}
