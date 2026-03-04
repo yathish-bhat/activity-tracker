@@ -37,14 +37,31 @@ body::after {
 * { scrollbar-width: none; }
 input, textarea, select, button {
   font-family: 'DM Sans', sans-serif; outline: none; border: none; background: none; color: var(--text);
-  font-size: 16px; /* prevents iOS zoom on focus */
+  font-size: 16px;
 }
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; }
 input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(0.7); }
 
-/* PWA standalone status bar fix */
+/* Fix: unit toggle buttons always visible */
+.unit-toggle {
+  display: flex;
+  border-radius: 9999px;
+  overflow: visible;
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+.unit-toggle button {
+  padding: 8px 14px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 70px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
 @media (display-mode: standalone) {
   body { padding-top: env(safe-area-inset-top, 0px); }
 }

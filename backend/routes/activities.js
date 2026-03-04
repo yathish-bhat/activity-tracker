@@ -1,20 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const { pool } = require('../database');
 const auth = require('../middleware/auth');
 
 router.use(auth);
 
-// GET /api/activities
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM activities WHERE user_id = ? ORDER BY created_at DESC').all(req.userId);
-    res.json(rows);
+    const r = await pool.query('SELECT * FROM activities WHERE user_id = $1 ORDER BY created_at DESC', [req.userId]);
+    res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/activities/weekly
-router.get('/weekly', (req, res) => {
+router.get('/weekly', async (req, res) => {
   try {
     const now = new Date();
     const day = now.getDay();
@@ -23,30 +21,28 @@ router.get('/weekly', (req, res) => {
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     const monStr = mon.toISOString().split('T')[0];
     const sunStr = sun.toISOString().split('T')[0];
-    const rows = db.prepare(
-      'SELECT date, type, SUM(duration) as total_duration FROM activities WHERE user_id = ? AND date >= ? AND date <= ? GROUP BY date, type ORDER BY date ASC'
-    ).all(req.userId, monStr, sunStr);
-    res.json(rows);
+    const r = await pool.query(
+      'SELECT date, type, SUM(duration)::int as total_duration FROM activities WHERE user_id = $1 AND date >= $2 AND date <= $3 GROUP BY date, type ORDER BY date ASC',
+      [req.userId, monStr, sunStr]
+    );
+    res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/activities/today
-router.get('/today', (req, res) => {
+router.get('/today', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const rows = db.prepare('SELECT * FROM activities WHERE user_id = ? AND date = ? ORDER BY created_at DESC').all(req.userId, today);
-    res.json(rows);
+    const r = await pool.query('SELECT * FROM activities WHERE user_id = $1 AND date = $2 ORDER BY created_at DESC', [req.userId, today]);
+    res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/activities/report/daily
-router.get('/report/daily', (req, res) => {
+router.get('/report/daily', async (req, res) => {
   try {
     const date = req.query.date || new Date().toISOString().split('T')[0];
-    const rows = db.prepare('SELECT * FROM activities WHERE user_id = ? AND date = ? ORDER BY created_at ASC').all(req.userId, date);
-    const summary = {};
-    let totalMin = 0;
-    let completed = 0;
+    const r = await pool.query('SELECT * FROM activities WHERE user_id = $1 AND date = $2 ORDER BY created_at ASC', [req.userId, date]);
+    const rows = r.rows;
+    const summary = {}; let totalMin = 0; let completed = 0;
     rows.forEach(a => {
       const min = a.unit === 'hours' ? a.duration * 60 : a.duration;
       totalMin += min;
@@ -61,8 +57,7 @@ router.get('/report/daily', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/activities/report/weekly
-router.get('/report/weekly', (req, res) => {
+router.get('/report/weekly', async (req, res) => {
   try {
     let refDate = req.query.weekOf ? new Date(req.query.weekOf + 'T00:00:00') : new Date();
     const day = refDate.getDay();
@@ -71,11 +66,12 @@ router.get('/report/weekly', (req, res) => {
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     const monStr = mon.toISOString().split('T')[0];
     const sunStr = sun.toISOString().split('T')[0];
-    const rows = db.prepare(
-      'SELECT * FROM activities WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date ASC, created_at ASC'
-    ).all(req.userId, monStr, sunStr);
-    const byDate = {}; const byType = {};
-    let totalMin = 0; let completed = 0;
+    const r = await pool.query(
+      'SELECT * FROM activities WHERE user_id = $1 AND date >= $2 AND date <= $3 ORDER BY date ASC, created_at ASC',
+      [req.userId, monStr, sunStr]
+    );
+    const rows = r.rows;
+    const byDate = {}; const byType = {}; let totalMin = 0; let completed = 0;
     rows.forEach(a => {
       const min = a.unit === 'hours' ? a.duration * 60 : a.duration;
       totalMin += min;
@@ -91,51 +87,48 @@ router.get('/report/weekly', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/activities
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { type, duration, unit, notes, date } = req.body;
     if (!type || !duration || !date) return res.status(400).json({ error: 'type, duration, and date are required' });
-    const stmt = db.prepare('INSERT INTO activities (user_id, type, duration, unit, notes, date, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const result = stmt.run(req.userId, type, duration, unit || 'minutes', notes || '', date, 'pending');
-    const row = db.prepare('SELECT * FROM activities WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(row);
+    const r = await pool.query(
+      'INSERT INTO activities (user_id, type, duration, unit, notes, date, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [req.userId, type, duration, unit || 'minutes', notes || '', date, 'pending']
+    );
+    res.status(201).json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PATCH /api/activities/:id/complete — mark as completed with actual duration
-router.patch('/:id/complete', (req, res) => {
+router.patch('/:id/complete', async (req, res) => {
   try {
     const { actual_duration, actual_unit } = req.body;
     if (!actual_duration) return res.status(400).json({ error: 'actual_duration is required' });
-    const existing = db.prepare('SELECT * FROM activities WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
-    if (!existing) return res.status(404).json({ error: 'Not found' });
-    db.prepare(
-      'UPDATE activities SET status = ?, actual_duration = ?, actual_unit = ?, completed_at = ? WHERE id = ? AND user_id = ?'
-    ).run('completed', actual_duration, actual_unit || 'minutes', new Date().toISOString(), req.params.id, req.userId);
-    const row = db.prepare('SELECT * FROM activities WHERE id = ?').get(req.params.id);
-    res.json(row);
+    const check = await pool.query('SELECT * FROM activities WHERE id = $1 AND user_id = $2', [req.params.id, req.userId]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const r = await pool.query(
+      'UPDATE activities SET status = $1, actual_duration = $2, actual_unit = $3, completed_at = NOW() WHERE id = $4 AND user_id = $5 RETURNING *',
+      ['completed', actual_duration, actual_unit || 'minutes', req.params.id, req.userId]
+    );
+    res.json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PATCH /api/activities/:id/reopen — mark back as pending
-router.patch('/:id/reopen', (req, res) => {
+router.patch('/:id/reopen', async (req, res) => {
   try {
-    const existing = db.prepare('SELECT * FROM activities WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
-    if (!existing) return res.status(404).json({ error: 'Not found' });
-    db.prepare(
-      'UPDATE activities SET status = ?, actual_duration = NULL, actual_unit = NULL, completed_at = NULL WHERE id = ? AND user_id = ?'
-    ).run('pending', req.params.id, req.userId);
-    const row = db.prepare('SELECT * FROM activities WHERE id = ?').get(req.params.id);
-    res.json(row);
+    const check = await pool.query('SELECT * FROM activities WHERE id = $1 AND user_id = $2', [req.params.id, req.userId]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const r = await pool.query(
+      'UPDATE activities SET status = $1, actual_duration = NULL, actual_unit = NULL, completed_at = NULL WHERE id = $2 AND user_id = $3 RETURNING *',
+      ['pending', req.params.id, req.userId]
+    );
+    res.json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /api/activities/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const result = db.prepare('DELETE FROM activities WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
-    if (result.changes === 0) return res.status(404).json({ error: 'Not found' });
+    const r = await pool.query('DELETE FROM activities WHERE id = $1 AND user_id = $2', [req.params.id, req.userId]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

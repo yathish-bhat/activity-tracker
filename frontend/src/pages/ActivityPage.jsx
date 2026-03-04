@@ -59,9 +59,9 @@ function AddModal({ type, onClose, onSubmit }) {
           <input type="number" inputMode="numeric" placeholder="0" value={duration} onChange={e => setDuration(e.target.value)}
             className="flex-1 px-4 py-3 rounded-xl text-lg font-bold"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)', fontFamily: 'Syne, sans-serif' }} autoFocus />
-          <div className="flex rounded-full overflow-hidden" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <div className="unit-toggle" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             {['minutes', 'hours'].map(u => (
-              <button key={u} onClick={() => setUnit(u)} className="px-3 sm:px-4 py-2 text-xs transition-all duration-200"
+              <button key={u} onClick={() => setUnit(u)}
                 style={{ background: unit === u ? 'rgba(200,245,90,0.12)' : 'transparent', color: unit === u ? 'var(--accent)' : 'var(--muted)' }}>
                 {u}
               </button>
@@ -123,9 +123,9 @@ function CompleteModal({ activity, onClose, onSubmit }) {
           <input type="number" inputMode="numeric" placeholder="0" value={actualDuration} onChange={e => setActualDuration(e.target.value)}
             className="flex-1 px-4 py-3 rounded-xl text-lg font-bold"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)', fontFamily: 'Syne, sans-serif' }} autoFocus />
-          <div className="flex rounded-full overflow-hidden" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <div className="unit-toggle" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             {['minutes', 'hours'].map(u => (
-              <button key={u} onClick={() => setActualUnit(u)} className="px-3 sm:px-4 py-2 text-xs transition-all duration-200"
+              <button key={u} onClick={() => setActualUnit(u)}
                 style={{ background: actualUnit === u ? 'rgba(200,245,90,0.12)' : 'transparent', color: actualUnit === u ? 'var(--accent)' : 'var(--muted)' }}>
                 {u}
               </button>
@@ -218,10 +218,8 @@ function downloadReport(text, filename) {
   URL.revokeObjectURL(url);
 }
 
-// ── Status badge component ──
 function StatusBadge({ activity, onComplete, onReopen }) {
   if (activity.status === 'completed') {
-    const actualMin = activity.actual_unit === 'hours' ? activity.actual_duration * 60 : activity.actual_duration;
     return (
       <div className="flex items-center gap-2">
         <div className="flex flex-col items-end">
@@ -324,7 +322,6 @@ export default function ActivityPage() {
   const grouped = activities.reduce((acc, a) => { (acc[a.date] = acc[a.date] || []).push(a); return acc; }, {});
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
-  // Stats
   const todayActivities = activities.filter(a => a.date === getTodayStr());
   const todayCompleted = todayActivities.filter(a => a.status === 'completed').length;
   const todayTotal = todayActivities.length;

@@ -1,38 +1,50 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, 'activities.db'));
-db.pragma('journal_mode = WAL');
+const { Pool } = require('pg');
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
-  CREATE TABLE IF NOT EXISTS activities (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    type TEXT NOT NULL,
-    duration INTEGER NOT NULL,
-    unit TEXT DEFAULT 'minutes',
-    notes TEXT,
-    date TEXT NOT NULL,
-    status TEXT DEFAULT 'pending',
-    actual_duration INTEGER,
-    actual_unit TEXT,
-    completed_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-`);
+async function initDB() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
 
-// Migration: add columns if they don't exist (safe for existing DBs)
-try { db.exec('ALTER TABLE activities ADD COLUMN status TEXT DEFAULT "pending"'); } catch(e) {}
-try { db.exec('ALTER TABLE activities ADD COLUMN actual_duration INTEGER'); } catch(e) {}
-try { db.exec('ALTER TABLE activities ADD COLUMN actual_unit TEXT'); } catch(e) {}
-try { db.exec('ALTER TABLE activities ADD COLUMN completed_at DATETIME'); } catch(e) {}
+      CREATE TABLE IF NOT EXISTS activities (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        duration INTEGER NOT NULL,
+        unit TEXT DEFAULT 'minutes',
+        notes TEXT,
+        date TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        actual_duration INTEGER,
+        actual_unit TEXT,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
 
-module.exports = db;
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    console.log('Database tables initialized');
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, initDB };

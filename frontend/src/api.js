@@ -13,11 +13,15 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// If 401, clear token and redirect to login
+// Only redirect on 401 for NON-auth routes
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const url = err.config?.url || '';
+    const isAuthRoute = url.includes('/api/auth/login') || url.includes('/api/auth/register') ||
+                        url.includes('/api/auth/forgot') || url.includes('/api/auth/reset');
+
+    if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('pulse_token');
       localStorage.removeItem('pulse_user');
       window.location.href = '/login';
