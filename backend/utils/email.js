@@ -1,15 +1,3 @@
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
 async function sendPasswordResetEmail(toEmail, userName, resetLink) {
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0a0f;color:#f0f0f5;border-radius:16px;">
@@ -32,12 +20,25 @@ async function sendPasswordResetEmail(toEmail, userName, resetLink) {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"Pulse Activity Tracker" <${process.env.SMTP_FROM}>`,
-    to: toEmail,
-    subject: 'Reset your Pulse password',
-    html,
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'Pulse Activity Tracker', email: process.env.SMTP_FROM },
+      to: [{ email: toEmail }],
+      subject: 'Reset your Pulse password',
+      htmlContent: html,
+    }),
   });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Brevo API error: ${res.status} - ${err}`);
+  }
 }
 
 module.exports = { sendPasswordResetEmail };
