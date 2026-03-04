@@ -48,16 +48,14 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert
 .unit-toggle {
   display: flex;
   border-radius: 9999px;
-  overflow: visible;
+  overflow: hidden;
   flex-shrink: 0;
-  min-width: fit-content;
 }
 .unit-toggle button {
-  padding: 8px 14px;
+  padding: 8px 12px;
   font-size: 12px;
   white-space: nowrap;
   flex-shrink: 0;
-  min-width: 70px;
   text-align: center;
   transition: all 0.2s;
 }

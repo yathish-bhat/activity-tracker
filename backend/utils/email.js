@@ -33,7 +33,7 @@ async function sendPasswordResetEmail(toEmail, userName, resetLink) {
   `;
 
   await transporter.sendMail({
-    from: `"Pulse Activity Tracker" <${process.env.SMTP_USER}>`,
+    from: `"Pulse Activity Tracker" <${process.env.SMTP_FROM}>`,
     to: toEmail,
     subject: 'Reset your Pulse password',
     html,
